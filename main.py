@@ -3,12 +3,12 @@ import random
 
 pygame.init()
 
-BLOCK_SIZE = 30
+BLOCK_SIZE = 18
 COLS = 10
 ROWS = 20
 WIDTH = COLS * BLOCK_SIZE
 HEIGHT = ROWS * BLOCK_SIZE
-SCREEN_WIDTH = WIDTH + 200
+SCREEN_WIDTH = WIDTH + 120
 SCREEN_HEIGHT = HEIGHT
 
 BORDER_COLOR = (255, 0, 0)
@@ -37,17 +37,22 @@ SHAPES = [
 class Tetris:
     def __init__(self):
         self.board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
+        self.piece_queue = [random.randint(0, len(SHAPES) - 1) for _ in range(2)]
         self.new_piece()
         self.score = 0
         self.game_over = False
         self.paused = False
 
     def new_piece(self):
-        self.piece_type = random.randint(0, len(SHAPES) - 1)
+        self.piece_type = self.piece_queue.pop(0)
+        self.piece_queue.append(random.randint(0, len(SHAPES) - 1))
         self.piece = [row[:] for row in SHAPES[self.piece_type]]
         self.color = self.piece_type + 1
         self.x = 0
         self.y = 0
+
+    def get_next_piece(self):
+        return self.piece_queue[0]
 
     def rotate(self):
         rotated = [list(row) for row in zip(*reversed(self.piece))]
@@ -114,14 +119,39 @@ class Tetris:
                     pygame.draw.rect(screen, COLORS[self.color],
                                    ((self.x + j) * BLOCK_SIZE, (self.y + i) * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1))
         
-        font = pygame.font.Font(None, 36)
+        font = pygame.font.Font(None, 24)
         score_surface = font.render(f"Score: {self.score}", True, (255, 255, 255))
-        pygame.draw.rect(screen, BORDER_COLOR, (WIDTH + 15, 45, score_surface.get_width() + 10, score_surface.get_height() + 10), 2)
-        screen.blit(score_surface, (WIDTH + 20, 50))
+        pygame.draw.rect(screen, BORDER_COLOR, (WIDTH + 10, 10, 100, 35), 2)
+        screen.blit(score_surface, (WIDTH + 15, 15))
+        
+        next_piece_idx = self.get_next_piece()
+        next_piece = SHAPES[next_piece_idx]
+        next_color = next_piece_idx + 1
+        
+        next_font = font.render("Next", True, (255, 255, 255))
+        pygame.draw.rect(screen, BORDER_COLOR, (WIDTH + 10, 55, 100, 70), 2)
+        screen.blit(next_font, (WIDTH + 35, 58))
+        
+        preview_block = 12
+        piece_w = len(next_piece[0]) * preview_block
+        piece_h = len(next_piece) * preview_block
+        box_w = 100
+        box_x = WIDTH + 10
+        box_y = 85
+        box_h = 40
+        
+        offset_x = box_x + (box_w - piece_w) // 2
+        offset_y = box_y + (box_h - piece_h) // 2
+        
+        for i in range(len(next_piece)):
+            for j in range(len(next_piece[i])):
+                if next_piece[i][j]:
+                    pygame.draw.rect(screen, COLORS[next_color],
+                                   (offset_x + j * preview_block, offset_y + i * preview_block, preview_block - 1, preview_block - 1))
         
         if self.game_over:
             game_over_text = font.render("GAME OVER", True, (255, 0, 0))
-            screen.blit(game_over_text, (WIDTH + 30, HEIGHT // 2))
+            screen.blit(game_over_text, (WIDTH + 15, HEIGHT // 2))
         
         pygame.display.flip()
 
