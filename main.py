@@ -55,11 +55,11 @@ class Tetris:
             self.piece = rotated
 
     def collision(self, piece, x, y):
-        for row in range(len(piece)):
-            for col in range(len(piece[row])):
-                if piece[row][col]:
-                    new_x = x + col
-                    new_y = y + row
+        for i in range(len(piece)):
+            for j in range(len(piece[i])):
+                if piece[i][j]:
+                    new_x = x + j
+                    new_y = y + i
                     if new_x < 0 or new_x >= COLS or new_y >= ROWS:
                         return True
                     if new_y >= 0 and self.board[new_y][new_x]:
@@ -67,11 +67,11 @@ class Tetris:
         return False
 
     def lock_piece(self):
-        for row in range(len(self.piece)):
-            for col in range(len(self.piece[row])):
-                if self.piece[row][col]:
-                    board_y = self.y + row
-                    board_x = self.x + col
+        for i in range(len(self.piece)):
+            for j in range(len(self.piece[i])):
+                if self.piece[i][j]:
+                    board_y = self.y + i
+                    board_x = self.x + j
                     if board_y >= 0:
                         self.board[board_y][board_x] = self.color
         self.clear_lines()
@@ -81,9 +81,9 @@ class Tetris:
 
     def clear_lines(self):
         lines_cleared = 0
-        for row in range(ROWS):
-            if all(self.board[row]):
-                self.board.pop(row)
+        for i in range(ROWS):
+            if all(self.board[i]):
+                self.board.pop(i)
                 self.board.insert(0, [0] * COLS)
                 lines_cleared += 1
         self.score += lines_cleared * 100
@@ -102,17 +102,17 @@ class Tetris:
         
         pygame.draw.rect(screen, BORDER_COLOR, (0, 0, WIDTH, HEIGHT), 2)
         
-        for y in range(ROWS):
-            for x in range(COLS):
-                if self.board[y][x]:
-                    pygame.draw.rect(screen, COLORS[self.board[y][x]],
-                                   (x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1))
+        for i in range(ROWS):
+            for j in range(COLS):
+                if self.board[i][j]:
+                    pygame.draw.rect(screen, COLORS[self.board[i][j]],
+                                   (j * BLOCK_SIZE, i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1))
         
-        for y in range(len(self.piece)):
-            for x in range(len(self.piece[y])):
-                if self.piece[y][x]:
+        for i in range(len(self.piece)):
+            for j in range(len(self.piece[i])):
+                if self.piece[i][j]:
                     pygame.draw.rect(screen, COLORS[self.color],
-                                   ((self.x + x) * BLOCK_SIZE, (self.y + y) * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1))
+                                   ((self.x + j) * BLOCK_SIZE, (self.y + i) * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1))
         
         font = pygame.font.Font(None, 36)
         score_surface = font.render(f"Score: {self.score}", True, (255, 255, 255))
@@ -136,6 +136,7 @@ def main():
     move_delay = 100
     last_left_time = 0
     last_right_time = 0
+    last_down_time = 0
     running = True
     
     while running:
@@ -176,8 +177,9 @@ def main():
                 game.move(1, 0)
                 last_right_time = current_time
             
-            if keys[pygame.K_DOWN]:
+            if keys[pygame.K_DOWN] and current_time - last_down_time > move_delay:
                 game.move(0, 1)
+                last_down_time = current_time
         
         game.draw(screen)
     
