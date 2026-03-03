@@ -2,6 +2,8 @@
 
 A classic Tetris game built with Python and pygame.
 
+![Tetris Game](screenshot.png)
+
 ## Installation
 
 ```bash
