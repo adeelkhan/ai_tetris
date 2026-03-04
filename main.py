@@ -12,16 +12,30 @@ SCREEN_WIDTH = WIDTH + 120
 SCREEN_HEIGHT = HEIGHT
 
 BORDER_COLOR = (255, 0, 0)
+BG_COLOR = (20, 20, 40)
+
+FALL_SPEED = 500
+MOVE_DELAY = 100
+
+COLOR_BLACK = (0, 0, 0)
+COLOR_CYAN = (0, 255, 255)
+COLOR_BLUE = (0, 0, 255)
+COLOR_ORANGE = (255, 165, 0)
+COLOR_YELLOW = (255, 255, 0)
+COLOR_GREEN = (0, 255, 0)
+COLOR_PURPLE = (128, 0, 128)
+COLOR_RED = (255, 0, 0)
+COLOR_WHITE = (255, 255, 255)
 
 COLORS = [
-    (0, 0, 0),
-    (0, 255, 255),
-    (0, 0, 255),
-    (255, 165, 0),
-    (255, 255, 0),
-    (0, 255, 0),
-    (128, 0, 128),
-    (255, 0, 0),
+    COLOR_BLACK,
+    COLOR_CYAN,
+    COLOR_BLUE,
+    COLOR_ORANGE,
+    COLOR_YELLOW,
+    COLOR_GREEN,
+    COLOR_PURPLE,
+    COLOR_RED,
 ]
 
 SHAPES = [
@@ -102,118 +116,151 @@ class Tetris:
             self.lock_piece()
         return False
 
-    def draw(self, screen):
-        screen.fill((20, 20, 40))
-        
-        pygame.draw.rect(screen, BORDER_COLOR, (0, 0, WIDTH, HEIGHT), 2)
-        
+    def draw_block(self, screen, color_idx, x, y, size=BLOCK_SIZE):
+        pygame.draw.rect(screen, COLORS[color_idx],
+                        (x * size, y * size, size - 1, size - 1))
+
+    def draw_board(self, screen):
         for i in range(ROWS):
             for j in range(COLS):
                 if self.board[i][j]:
-                    pygame.draw.rect(screen, COLORS[self.board[i][j]],
-                                   (j * BLOCK_SIZE, i * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1))
-        
+                    self.draw_block(screen, self.board[i][j], j, i)
+
+    def draw_current_piece(self, screen):
         for i in range(len(self.piece)):
             for j in range(len(self.piece[i])):
                 if self.piece[i][j]:
-                    pygame.draw.rect(screen, COLORS[self.color],
-                                   ((self.x + j) * BLOCK_SIZE, (self.y + i) * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1))
-        
-        font = pygame.font.Font(None, 24)
-        score_surface = font.render(f"Score: {self.score}", True, (255, 255, 255))
+                    self.draw_block(screen, self.color, self.x + j, self.y + i)
+
+    def draw_score_box(self, screen, font):
+        score_text = font.render(f"Score: {self.score}", True, COLOR_WHITE)
         pygame.draw.rect(screen, BORDER_COLOR, (WIDTH + 10, 10, 100, 35), 2)
-        screen.blit(score_surface, (WIDTH + 15, 15))
-        
+        screen.blit(score_text, (WIDTH + 15, 15))
+
+    def draw_next_piece_box(self, screen, font):
+        next_font = font.render("Next", True, COLOR_WHITE)
+        pygame.draw.rect(screen, BORDER_COLOR, (WIDTH + 10, 55, 100, 70), 2)
+        screen.blit(next_font, (WIDTH + 35, 58))
+
+    def draw_next_piece(self, screen):
         next_piece_idx = self.get_next_piece()
         next_piece = SHAPES[next_piece_idx]
         next_color = next_piece_idx + 1
-        
-        next_font = font.render("Next", True, (255, 255, 255))
-        pygame.draw.rect(screen, BORDER_COLOR, (WIDTH + 10, 55, 100, 70), 2)
-        screen.blit(next_font, (WIDTH + 35, 58))
-        
+
         preview_block = 12
         piece_w = len(next_piece[0]) * preview_block
         piece_h = len(next_piece) * preview_block
-        box_w = 100
-        box_x = WIDTH + 10
-        box_y = 85
-        box_h = 40
-        
+        box_w, box_h = 100, 40
+        box_x, box_y = WIDTH + 10, 85
+
         offset_x = box_x + (box_w - piece_w) // 2
         offset_y = box_y + (box_h - piece_h) // 2
-        
+
         for i in range(len(next_piece)):
             for j in range(len(next_piece[i])):
                 if next_piece[i][j]:
                     pygame.draw.rect(screen, COLORS[next_color],
-                                   (offset_x + j * preview_block, offset_y + i * preview_block, preview_block - 1, preview_block - 1))
-        
+                                    (offset_x + j * preview_block,
+                                     offset_y + i * preview_block,
+                                     preview_block - 1, preview_block - 1))
+
+    def draw_game_over(self, screen, font):
+        game_over_text = font.render("GAME OVER", True, COLOR_RED)
+        screen.blit(game_over_text, (WIDTH + 15, HEIGHT // 2))
+
+    def draw(self, screen):
+        screen.fill(BG_COLOR)
+        pygame.draw.rect(screen, BORDER_COLOR, (0, 0, WIDTH, HEIGHT), 2)
+
+        self.draw_board(screen)
+        self.draw_current_piece(screen)
+
+        font = pygame.font.Font(None, 24)
+        self.draw_score_box(screen, font)
+        self.draw_next_piece_box(screen, font)
+        self.draw_next_piece(screen)
+
         if self.game_over:
-            game_over_text = font.render("GAME OVER", True, (255, 0, 0))
-            screen.blit(game_over_text, (WIDTH + 15, HEIGHT // 2))
-        
+            self.draw_game_over(screen, font)
+
         pygame.display.flip()
 
-def main():
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Tetris")
-    clock = pygame.time.Clock()
-    game = Tetris()
-    
-    fall_time = 0
-    fall_speed = 500
-    move_delay = 100
-    last_left_time = 0
-    last_right_time = 0
-    last_down_time = 0
-    running = True
-    
-    while running:
-        current_time = pygame.time.get_ticks()
-        fall_time += clock.get_rawtime()
-        clock.tick()
+
+class Game:
+    def __init__(self):
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption("Tetris")
+        self.clock = pygame.time.Clock()
+        self.game = Tetris()
         
-        keys = pygame.key.get_pressed()
-        
+        self.fall_time = 0
+        self.last_left_time = 0
+        self.last_right_time = 0
+        self.last_down_time = 0
+        self.running = True
+
+    def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                self.running = False
             elif event.type == pygame.KEYDOWN:
-                if not game.game_over:
-                    if event.key == pygame.K_LEFT:
-                        game.move(-1, 0)
-                    elif event.key == pygame.K_RIGHT:
-                        game.move(1, 0)
-                    elif event.key == pygame.K_DOWN:
-                        game.move(0, 1)
-                    elif event.key == pygame.K_SPACE:
-                        game.rotate()
-                    elif event.key == pygame.K_p:
-                        game.paused = not game.paused
-                if event.key == pygame.K_r and game.game_over:
-                    game = Tetris()
-        
-        if not game.game_over and not game.paused:
-            if fall_time >= fall_speed:
-                fall_time = 0
-                game.move(0, 1)
-            
-            if keys[pygame.K_LEFT] and current_time - last_left_time > move_delay:
-                game.move(-1, 0)
-                last_left_time = current_time
-            
-            if keys[pygame.K_RIGHT] and current_time - last_right_time > move_delay:
-                game.move(1, 0)
-                last_right_time = current_time
-            
-            if keys[pygame.K_DOWN] and current_time - last_down_time > move_delay:
-                game.move(0, 1)
-                last_down_time = current_time
-        
-        game.draw(screen)
-    
-    pygame.quit()
+                self.handle_keydown(event)
+
+    def handle_keydown(self, event):
+        if not self.game.game_over:
+            if event.key == pygame.K_LEFT:
+                self.game.move(-1, 0)
+            elif event.key == pygame.K_RIGHT:
+                self.game.move(1, 0)
+            elif event.key == pygame.K_DOWN:
+                self.game.move(0, 1)
+            elif event.key == pygame.K_SPACE:
+                self.game.rotate()
+            elif event.key == pygame.K_p:
+                self.game.paused = not self.game.paused
+        if event.key == pygame.K_r and self.game.game_over:
+            self.game = Tetris()
+
+    def handle_input(self):
+        current_time = pygame.time.get_ticks()
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_LEFT] and current_time - self.last_left_time > MOVE_DELAY:
+            self.game.move(-1, 0)
+            self.last_left_time = current_time
+
+        if keys[pygame.K_RIGHT] and current_time - self.last_right_time > MOVE_DELAY:
+            self.game.move(1, 0)
+            self.last_right_time = current_time
+
+        if keys[pygame.K_DOWN] and current_time - self.last_down_time > MOVE_DELAY:
+            self.game.move(0, 1)
+            self.last_down_time = current_time
+
+    def update_game(self):
+        self.fall_time += self.clock.get_rawtime()
+        self.clock.tick()
+
+        if self.fall_time >= FALL_SPEED:
+            self.fall_time = 0
+            self.game.move(0, 1)
+
+    def run(self):
+        while self.running:
+            self.handle_events()
+
+            if not self.game.game_over and not self.game.paused:
+                self.handle_input()
+                self.update_game()
+
+            self.game.draw(self.screen)
+
+        pygame.quit()
+
+
+def main():
+    Game().run()
+
 
 if __name__ == "__main__":
     main()
