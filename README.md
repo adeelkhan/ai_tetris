@@ -2,7 +2,9 @@
 
 A classic Tetris game built with Python and pygame.
 
-![Tetris Game](screenshot.png)
+<p align="center">
+  <img src="screenshot.png" alt="Tetris Game">
+</p>
 
 ## Installation
 
