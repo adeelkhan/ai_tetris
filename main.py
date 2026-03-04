@@ -1,5 +1,7 @@
 import pygame
 import random
+import math
+import array
 
 pygame.init()
 
@@ -48,14 +50,46 @@ SHAPES = [
     [[0, 1, 1], [1, 1, 0]],
 ]
 
-class Tetris:
+
+def generate_tone(frequency, duration, volume=0.5):
+    sample_rate = 44100
+    n_samples = int(sample_rate * duration)
+    buf = array.array('h', [0] * n_samples)
+    
+    for i in range(n_samples):
+        t = float(i) / sample_rate
+        value = int(32767 * volume * math.sin(2 * math.pi * frequency * t))
+        buf[i] = max(-32768, min(32767, value))
+    
+    return pygame.mixer.Sound(buffer=buf)
+
+
+class SoundManager:
     def __init__(self):
+        pygame.mixer.init()
+        self.lock_sound = generate_tone(220, 0.1, 0.3)
+        self.line_clear_sound = generate_tone(440, 0.15, 0.4)
+        self.game_over_sound = generate_tone(150, 0.5, 0.5)
+
+    def play_lock(self):
+        self.lock_sound.play()
+
+    def play_line_clear(self):
+        self.line_clear_sound.play()
+
+    def play_game_over(self):
+        self.game_over_sound.play()
+
+
+class Tetris:
+    def __init__(self, sound_manager=None):
         self.board = [[0 for _ in range(COLS)] for _ in range(ROWS)]
         self.piece_queue = [random.randint(0, len(SHAPES) - 1) for _ in range(2)]
         self.new_piece()
         self.score = 0
         self.game_over = False
         self.paused = False
+        self.sound_manager = sound_manager
 
     def new_piece(self):
         self.piece_type = self.piece_queue.pop(0)
@@ -93,10 +127,14 @@ class Tetris:
                     board_x = self.x + j
                     if board_y >= 0:
                         self.board[board_y][board_x] = self.color
+        if self.sound_manager:
+            self.sound_manager.play_lock()
         self.clear_lines()
         self.new_piece()
         if self.collision(self.piece, self.x, self.y):
             self.game_over = True
+            if self.sound_manager:
+                self.sound_manager.play_game_over()
 
     def clear_lines(self):
         lines_cleared = 0
@@ -105,6 +143,8 @@ class Tetris:
                 self.board.pop(i)
                 self.board.insert(0, [0] * COLS)
                 lines_cleared += 1
+        if lines_cleared > 0 and self.sound_manager:
+            self.sound_manager.play_line_clear()
         self.score += lines_cleared * 100
 
     def move(self, dx, dy):
@@ -191,7 +231,8 @@ class Game:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Tetris")
         self.clock = pygame.time.Clock()
-        self.game = Tetris()
+        self.sound_manager = SoundManager()
+        self.game = Tetris(self.sound_manager)
         
         self.fall_time = 0
         self.last_left_time = 0
@@ -219,7 +260,7 @@ class Game:
             elif event.key == pygame.K_p:
                 self.game.paused = not self.game.paused
         if event.key == pygame.K_r and self.game.game_over:
-            self.game = Tetris()
+            self.game = Tetris(self.sound_manager)
 
     def handle_input(self):
         current_time = pygame.time.get_ticks()
